@@ -233,7 +233,7 @@ def main() -> None:
     if args.verbose == 2:
         logger.setLevel(logging.DEBUG)
     else:
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
     engine = make_engine(args.engine, args.threads)
     server = Server(logger, args.url, args.token, version)
     games = 0
@@ -251,7 +251,6 @@ def main() -> None:
         with open_file(args.file) as pgn:
             skip_next = False
             for line in pgn:
-                print(line)
                 if line.startswith("[Site "):
                     site = line
                     games = games + 1
@@ -271,10 +270,8 @@ def main() -> None:
                     ):
                     has_master = True
                 else:
-                    print('here')
                     r_tier = util.rating_tier(line)
                     t_tier = util.time_control_tier(line)
-                    print("%eval")
                     if r_tier is not None:
                         tier = min(tier, r_tier)
                     elif t_tier is not None:
@@ -282,14 +279,12 @@ def main() -> None:
                     elif line.startswith("1. ") and skip_next:
                         logger.debug("Skip {}".format(site))
                         skip_next = False
-                    elif "%eval" in line or 1==1:
+                    elif "%eval" in line:
                         tier = tier + 1 if has_master else tier
                         game = chess.pgn.read_game(StringIO("{}\n{}".format(site, line)))
-                        print(game)
                         assert(game)
                         game_id = game.headers.get("Site", "?")[20:]
                         if server.is_seen(game_id):
-                            print('skip?')
                             to_skip = 0
                             logger.info(f'Game was already seen before, skipping {to_skip} - {games}')
                             skip = games + to_skip
@@ -297,9 +292,7 @@ def main() -> None:
 
                         # logger.info(f'https://lichess.org/{game_id} tier {tier}')
                         try:
-                            print('jup')
                             puzzle = analyze_game(server, engine, game, tier)
-                            print(puzzle)
                             if puzzle is not None:
                                 logger.info(f'v{version} {args.file} {part}/{parts} {util.avg_knps()} knps, tier {tier}, game {games}')
                                 server.post(game_id, puzzle)
@@ -308,8 +301,8 @@ def main() -> None:
     except KeyboardInterrupt:
         print(f'v{version} {args.file} Game {games}')
         sys.exit(1)
-    finally:
-        engine.close()
+
+    engine.close()
 
 if __name__ == "__main__":
     main()
